@@ -1,0 +1,52 @@
+//
+// build.gradle in TeamCode
+//
+// Most of the definitions for building your module reside in a common, shared
+// file 'build.common.gradle'. Being factored in this way makes it easier to
+// integrate updates to the FTC into your code. If you really need to customize
+// the build definitions, you can place those customizations in this file, but
+// please think carefully as to whether such customizations are really necessary
+// before doing so.
+
+
+// Custom definitions may go here
+
+// CUSTOM FAST LOAD SCRIPT
+// https://gist.github.com/MatthewOates36/1e38452236dc9f145c3a6b2addfb418f
+buildscript {
+    repositories {
+        mavenCentral()
+        maven {
+            url = 'https://www.matthewo.tech/maven/'
+        }
+    }
+    dependencies {
+        classpath 'org.team11260:fast-load-plugin:0.1.2'
+    }
+}
+
+// Include common definitions from above.
+apply from: '../build.common.gradle'
+apply from: '../build.dependencies.gradle'
+apply plugin: 'org.team11260.fast-load-plugin'
+
+android {
+    namespace = 'org.firstinspires.ftc.teamcode'
+
+    packagingOptions {
+        jniLibs.useLegacyPackaging true
+    }
+}
+
+dependencies {
+    implementation project(':FtcRobotController')
+    testImplementation 'junit:junit:4.12'
+    annotationProcessor files('lib/OpModeAnnotationProcessor.jar')
+    implementation 'org.team11260:fast-load:0.1.2'
+}
+
+repositories {
+    maven {
+        url = 'https://www.matthewo.tech/maven/'
+    }
+}
