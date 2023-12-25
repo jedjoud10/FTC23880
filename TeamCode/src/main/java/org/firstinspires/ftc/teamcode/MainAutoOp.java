@@ -23,7 +23,6 @@ import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.IMU;
 
 import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
@@ -65,13 +64,13 @@ Near the end go park backstage.
 
 public class MainAutoOp extends LinearOpMode {
     private RobotMovement movement;
+    private RobotGripper gripper;
     private DistanceSensors distances;
     private TfodProcessor tfodProcessor;
     private AprilTagProcessor aprilTagProcessor;
     private CameraStreamProcessor cameraStreamProcessor;
     private VisionPortal visionPortal;
-    private CRServo leftGripperServo, rightGripperServo;
-    private double rightGripperPower, leftGripperPower = 0;
+
     private int teamPropIndex = 0; // [left = -1, center = 0, right = 1]
     private IMU imu;
     private MultipleTelemetry debug = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
@@ -100,10 +99,15 @@ public class MainAutoOp extends LinearOpMode {
         moveBackstage(coord);
 
         // Align with drop column, drop yellow pixel (20p)
-        alignDropColumn();
+        alignDropColumn(true);
 
         // (Maybe) round trip back to pickup 2 white pixels (extra 6p-10p)
-        //      Align with drop column, drop 2 white pixels (20p)
+        if (AutoStrategy.PICKUP_WHITE_PIXEL) {
+            // Go pick em up
+
+            // Align with drop column, drop 2 white pixels (20p)
+            alignDropColumn(false);
+        }
         // Park (5p)
 
         // run until the end of the match (driver presses STOP)
@@ -118,11 +122,10 @@ public class MainAutoOp extends LinearOpMode {
     }
 
     private void initHwMap() {
-        leftGripperServo = hardwareMap.get(CRServo.class, "leftGripper");
-        rightGripperServo = hardwareMap.get(CRServo.class, "rightGripper");
         imu = hardwareMap.get(IMU.class, "imu");
         movement = new RobotMovement(hardwareMap, debug);
         distances = new DistanceSensors(hardwareMap, debug);
+        gripper = new RobotGripper(hardwareMap, debug);
     }
 
     private void initVisionPortal() {
@@ -145,7 +148,7 @@ public class MainAutoOp extends LinearOpMode {
                 .setDrawCubeProjection(true)
                 .setDrawTagID(true)
                 .setLensIntrinsics(822.317, 822.317, 319.495, 242.502)
-                .setOutputUnits(DistanceUnit.CM, AngleUnit.RADIANS)
+                .setOutputUnits(DistanceUnit.CM, AngleUnit.DEGREES)
                 .setDrawTagOutline(true)
                 .build();
     }
@@ -283,9 +286,9 @@ public class MainAutoOp extends LinearOpMode {
         }
     }
 
-    // Align th robot with the corresponding drop column
+    // Align th robot with the corresponding drop column (team prop spike mark pos) if neede
     // Margin of 2 x pixel size
-    private void alignDropColumn() {
+    private void alignDropColumn(boolean yellowPixel) {
         double horizontalDelta = 0.0;
         movement.moveHorizontal(horizontalDelta * Map.PIXEL_OUTER_SIZE, 0.02, 45);
     }

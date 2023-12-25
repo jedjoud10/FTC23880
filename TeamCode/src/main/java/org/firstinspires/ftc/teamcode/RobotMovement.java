@@ -205,7 +205,6 @@ public class RobotMovement {
     }
 
     // Smarter moveSteppedHorizontalRaw that actually takes the value of y and x and angle
-    // Still pretty dumb tho as it shits itself if x > y
     public void moveHorizontal(double x, double y, double angle) {
         // Gotta use sine law for this. FUCK I HATE SINE LAW
         // sin angle / x = sin (pi/2 - angle) / a
@@ -215,8 +214,6 @@ public class RobotMovement {
         double hyp = Math.hypot(a, x);
         moveSteppedHorizontalRaw(y, hyp, y-a, angle);
     }
-
-
 
     // Move the robot forward / backwards using a specific distance
     public void moveLine(double distance) {

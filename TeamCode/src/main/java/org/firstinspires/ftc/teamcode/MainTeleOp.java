@@ -34,51 +34,22 @@ import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 @Config
 public class MainTeleOp extends LinearOpMode {
     private RobotMovement movement;
+    private RobotGripper gripper;
     private Servo launchServo;
-    private CRServo armServo, leftGripperServo, rightGripperServo;
-    private double rightGripperPower, leftGripperPower = 0;
     private MultipleTelemetry debug = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
     @Override
     public void runOpMode() {
-        // Fetch main motors from hardware
         movement = new RobotMovement(hardwareMap, debug);
-
-        // Fetch servos from hardware
+        gripper = new RobotGripper(hardwareMap, debug);
         launchServo = hardwareMap.get(Servo.class, "launchServo");
-        armServo = hardwareMap.get(CRServo.class, "linSysServo");
-        leftGripperServo = hardwareMap.get(CRServo.class, "leftGripper");
-        rightGripperServo = hardwareMap.get(CRServo.class, "rightGripper");
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            armServo.setPower(gamepad2.right_stick_x);
-
-            // CONTINUOUS SERVO MODIF: POWER SHIFTED BY -0.06
-            if (gamepad2.left_bumper) {
-                rightGripperPower = -1.0;
-            } else if (gamepad2.left_trigger > 0.5) {
-                rightGripperPower = 1.0;
-            } else {
-                rightGripperPower = -0.06;
-            }
-
-            if (gamepad2.right_bumper) {
-                leftGripperPower = 1;
-            } else if (gamepad2.right_trigger > 0.5) {
-                leftGripperPower = -1;
-            } else {
-                leftGripperPower = -0.047;
-            }
-
-            // Left and Right grippers controls
-            leftGripperServo.setPower(leftGripperPower);
-            rightGripperServo.setPower(rightGripperPower);
-
-            debug.addData("L.G Power", leftGripperPower);
-            debug.addData("R.G Power", rightGripperPower);
+            // Handle gripper
+            gripper.handleGripperUpdate(gamepad2);
 
             // Launch servo activation
             launchServo.setPosition(gamepad1.a ? 0.4 : 0.0);
