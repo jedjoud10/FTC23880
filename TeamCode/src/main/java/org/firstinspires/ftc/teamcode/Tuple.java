@@ -12,11 +12,6 @@ public class Tuple<T> {
         this.right = right;
     }
 
-    public void apply(TupleApply<T> func) {
-        func.apply(this.left);
-        func.apply(this.right);
-    }
-
     @Override
     public String toString() {
         return left.toString() + " " + right.toString();

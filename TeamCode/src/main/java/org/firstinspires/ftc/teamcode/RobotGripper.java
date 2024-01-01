@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -19,7 +20,7 @@ public class RobotGripper {
                 return CRServoState.Forward;
             } else if (delta < 0.0) {
                 return CRServoState.Reverse;
-            } else if (Math.abs(delta) < 0.1) {
+            } else if (Math.abs(delta) < SERVO_CALC_EPSILON) {
                 return CRServoState.Float;
             }
 
@@ -27,33 +28,83 @@ public class RobotGripper {
         }
     }
 
+    public static double ARM_LENGTH = 0.40; // todo: MEASURE
     public static double SERVO_ROT_VAL_SPEED = 0.02;
+    public static double SERVO_CALC_EPSILON = 0.02;
     private CRServo armServo, leftGripperServo, rightGripperServo;
     private double currentRight, currentLeft;
     private double targetRight, targetLeft;
+    private double currentRobotFwdOffset;
+    private double targetRobotFwdOffset;
+    private double armAngle;
+    private AnalogInput armFFInput;
     private MultipleTelemetry debug;
-    public RobotGripper(HardwareMap hwMap, MultipleTelemetry debug) {
+    private RobotMovement movement;
+    public RobotGripper(RobotMovement movement, HardwareMap hwMap, MultipleTelemetry debug) {
         this.debug = debug;
+        this.movement = movement;
         leftGripperServo = hwMap.get(CRServo.class, "leftGripper");
         rightGripperServo = hwMap.get(CRServo.class, "rightGripper");
-        armServo = hwMap.get(CRServo.class, "linSysServo");
+        armServo = hwMap.get(CRServo.class, "armServo");
+        armFFInput = hwMap.analogInput.get("armServoInput");
     }
 
     public void handleGripperUpdate(Gamepad gamepad) {
-        armServo.setPower(gamepad.right_stick_x);
+        setArmHeight(gamepad.right_stick_y);
+        setGripperTargets(gamepad.left_bumper, gamepad.right_bumper);
+        updateServoPowers();
+        updateArmPowersPID();
+    }
 
-        targetLeft = gamepad.left_bumper ? 1 : 0;
-        targetRight = gamepad.right_bumper ? 1 : 0;
+    public void setGripperTargets(boolean left, boolean right) {
+        targetLeft = left ? 1.0 : 0.0;
+        targetRight = right ? 1.0 : 0.0;
+    }
+
+    public void updateServoPowers() {
         double deltaLeft = currentLeft - targetLeft;
         double deltaRight = currentRight - targetRight;
         currentLeft += deltaLeft * SERVO_ROT_VAL_SPEED;
         currentRight += deltaRight * SERVO_ROT_VAL_SPEED;
-        CRServoState left = CRServoState.stateFromDelta(deltaLeft);
-        CRServoState right = CRServoState.stateFromDelta(deltaRight);
 
         // CR SERVO MODIF: power shifted by -0.06 and -0.047
-        leftGripperServo.setPower(getCrPower(left, -0.06));
-        rightGripperServo.setPower(getCrPower(right, -0.047));
+        double leftPower = getCrPower(CRServoState.stateFromDelta(deltaLeft), -0.06);
+        double rightPower = getCrPower(CRServoState.stateFromDelta(deltaRight), -0.047);
+        leftGripperServo.setPower(leftPower);
+        rightGripperServo.setPower(rightPower);
+    }
+
+    // Set height directly. The bot will try to keep it in a straight vertical line.
+    // Height: val between 0, ARM_LENGTH
+    public void setArmHeight(double height) {
+        double rad = Math.asin(height / ARM_LENGTH);
+        armAngle = rad;
+        targetRobotFwdOffset = Math.cos(rad) * ARM_LENGTH;
+        movement.moveLine(targetRobotFwdOffset - currentRobotFwdOffset);
+        currentRobotFwdOffset = targetRobotFwdOffset;
+    }
+
+    // Custom PID control for the big arm servo as it uses a gear
+    // for reduction and we can't use the internal angle stuff
+    public void updateArmPowersPID() {
+        double percent = armFFInput.getVoltage() / armFFInput.getMaxVoltage();
+        double angle = percent * 360;
+    }
+
+    // Open/close the claws and wait until they are completely open/closed
+    // If only we didn't have to make the servos continuous. If only.
+    public void setGripperTargetsWait(boolean left, boolean right) {
+        setGripperTargets(left, right);
+        while (isBusy()) {
+            updateServoPowers();
+            Utils.sleep(10);
+        }
+    }
+
+    public boolean isBusy() {
+        double deltaLeft = currentLeft - targetLeft;
+        double deltaRight = currentRight - targetRight;
+        return Math.abs(deltaLeft) > SERVO_CALC_EPSILON || Math.abs(deltaRight) > SERVO_CALC_EPSILON;
     }
 
     public static double getCrPower(CRServoState state, double offset) {

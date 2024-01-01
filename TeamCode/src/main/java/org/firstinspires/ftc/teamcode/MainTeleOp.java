@@ -40,7 +40,7 @@ public class MainTeleOp extends LinearOpMode {
     @Override
     public void runOpMode() {
         movement = new RobotMovement(hardwareMap, debug);
-        gripper = new RobotGripper(hardwareMap, debug);
+        gripper = new RobotGripper(movement, hardwareMap, debug);
         launchServo = hardwareMap.get(Servo.class, "launchServo");
 
         // Wait for the game to start (driver presses PLAY)

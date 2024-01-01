@@ -21,8 +21,8 @@ public class MapPosition {
     public MapCoord convertToId() {
         double xNew = MathUtils.clamp(x, 0, Map.MAX_MAP_SIZE)  / Map.TILE_SIZE;
         double yNew = MathUtils.clamp(y, 0, Map.MAX_MAP_SIZE) / Map.TILE_SIZE;
-        int xFloored = (int)Math.floor(xNew + 1);
-        int yFloored = (int)Math.floor(yNew + 1);
+        int xFloored = (int)Math.floor(xNew);
+        int yFloored = (int)Math.floor(yNew);
         return MapCoord.withValue(xFloored + yFloored*6);
     }
 

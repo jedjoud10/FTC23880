@@ -89,8 +89,28 @@ public class MainAutoOp extends LinearOpMode {
         for (int i = 0; i < 4; i++) {
             movement.moveLine(0.3);
             sleep(1000);
-            movement.rotateInPlace(90.0);
+            movement.rotate90InPlace(true);
         }
+
+        sleep(5000);
+        movement.moveAround(1.0, 90);
+        sleep(5000);
+        movement.moveAround(-1.0, 90);
+        sleep(5000);
+        movement.rotate90InPlace(false);
+        sleep(5000);
+        movement.rotate180InPlace(false);
+        sleep(5000);
+        movement.moveHorizontal(1, 1, 30);
+        sleep(5000);
+        movement.moveHorizontal(1, 1, 45);
+        sleep(5000);
+        movement.moveHorizontal(1, 1, 60);
+        sleep(5000);
+        for (int i = 0; i < 10; i++) {
+            movement.moveHorizontal(0.1, 0.1, 45);
+        }
+
 
         // Place purple pixel on team prop (20p), align to backstage
         MapCoord coord = teamPropPlacePurple();
@@ -99,16 +119,18 @@ public class MainAutoOp extends LinearOpMode {
         moveBackstage(coord);
 
         // Align with drop column, drop yellow pixel (20p)
-        alignDropColumn(true);
+        alignDropColumnAndDrop(true);
 
         // (Maybe) round trip back to pickup 2 white pixels (extra 6p-10p)
         if (AutoStrategy.PICKUP_WHITE_PIXEL) {
             // Go pick em up
 
             // Align with drop column, drop 2 white pixels (20p)
-            alignDropColumn(false);
+            alignDropColumnAndDrop(false);
         }
-        // Park (5p)
+
+        // Park (5p) (assumes it is at E5)
+        park();
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
@@ -125,7 +147,7 @@ public class MainAutoOp extends LinearOpMode {
         imu = hardwareMap.get(IMU.class, "imu");
         movement = new RobotMovement(hardwareMap, debug);
         distances = new DistanceSensors(hardwareMap, debug);
-        gripper = new RobotGripper(hardwareMap, debug);
+        gripper = new RobotGripper(movement, hardwareMap, debug);
     }
 
     private void initVisionPortal() {
@@ -257,6 +279,7 @@ public class MainAutoOp extends LinearOpMode {
                         movement.rotate90InPlace(false);
                         return MapCoord.E4;
                     case 1:
+                        // Do funky maneuver
                         movement.rotate90InPlace(false);
                         movement.moveLine(0.50 * Map.TILE_SIZE);
                         movement.moveAround(Map.TILE_SIZE, 180);
@@ -286,10 +309,49 @@ public class MainAutoOp extends LinearOpMode {
         }
     }
 
-    // Align th robot with the corresponding drop column (team prop spike mark pos) if neede
-    // Margin of 2 x pixel size
-    private void alignDropColumn(boolean yellowPixel) {
+    // Align the robot with the corresponding drop column (team prop spike mark pos) if neede
+
+    private void alignDropColumnAndDrop(boolean yellowPixel) {
+        movement.setTargetTickThrottle(0.2);
+        movement.moveLine(0.2);
+
         double horizontalDelta = 0.0;
+
+        if (yellowPixel) {
+            // move to corresponding column
+            // Margin of 2 x pixel size
+        }
+
         movement.moveHorizontal(horizontalDelta * Map.PIXEL_OUTER_SIZE, 0.02, 45);
+        gripper.setArmHeight(0.0);
+
+        while (!distances.checkFront()) {
+            movement.moveLine(0.03);
+        }
+
+        gripper.setGripperTargetsWait(false, false);
+    }
+
+    // Pickup 2 white pixels from the audience side. Assumes the bot is D2-S
+    private void pickupWhitePixels() {
+        movement.moveLine(Map.TILE_SIZE * 0.9);
+        gripper.setGripperTargetsWait(false, false);
+        movement.setTargetTickThrottle(0.2);
+        movement.moveLine(Map.TILE_SIZE * 0.9);
+        movement.setTargetTickThrottle(1.0);
+    }
+
+    // Park the bot. Either to the corner or the other wing. Assumes the bot is E5-N state
+    private void park() {
+        switch (AutoStrategy.PARK_POS) {
+            case D6:
+                movement.rotate90InPlace(false);
+                movement.moveAround(Map.TILE_SIZE, 90);
+                break;
+            case F6:
+                movement.rotate90InPlace(true);
+                movement.moveAround(Map.TILE_SIZE, -90);
+                break;
+        }
     }
 }

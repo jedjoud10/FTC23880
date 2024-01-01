@@ -51,6 +51,7 @@ public class RobotMovement {
 
     public Tuple<DcMotorEx> motors;
     private MultipleTelemetry debug;
+    private double setTargetThrottle = 1.0;
 
     public RobotMovement(HardwareMap hwMap, MultipleTelemetry debug) {
         DcMotorEx leftMotor = hwMap.get(DcMotorEx.class, "motor3");
@@ -143,24 +144,28 @@ public class RobotMovement {
 
     // Apply velocities to the motors (velocity in rad/s)
     // Should only be used for driving manually
-    private void applyVelocities(Tuple<Double> velocities) {
+    public void applyVelocities(Tuple<Double> velocities) {
         motors.left.setVelocity(velocities.left, AngleUnit.RADIANS);
         motors.right.setVelocity(velocities.right, AngleUnit.RADIANS);
     }
 
     // Set the target tick position for motors and WAIT
-    private void setTargetTickWait(Tuple<Integer> ticks) {
-        motors.left.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        motors.right.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+    public void setTargetTickWait(Tuple<Integer> ticks) {
         motors.left.setTargetPosition(ticks.left);
         motors.right.setTargetPosition(ticks.right);
+        motors.left.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        motors.right.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        motors.left.setPower(setTargetThrottle);
+        motors.right.setPower(setTargetThrottle);
 
         while(motors.left.isBusy() || motors.right.isBusy()) {
             Utils.sleep(10);
         }
+    }
 
-        motors.left.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-        motors.right.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
+    // Set main throttle for setTargetTickWait method
+    public void setTargetTickThrottle(double throttle) {
+        setTargetThrottle = throttle;
     }
 
     // Move the robot using the given gamepad input (each update tick)
@@ -206,7 +211,7 @@ public class RobotMovement {
 
     // Smarter moveSteppedHorizontalRaw that actually takes the value of y and x and angle
     public void moveHorizontal(double x, double y, double angle) {
-        // Gotta use sine law for this. FUCK I HATE SINE LAW
+        // Gotta use sine law for this. I FUCKING HATE SINE LAW
         // sin angle / x = sin (pi/2 - angle) / a
         // a = x sin (pi/2 - angle) / sin angle
         double rad = angle * Math.PI / 180.0;
