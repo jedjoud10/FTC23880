@@ -37,7 +37,6 @@ public class RobotGripper {
     private double currentRobotFwdOffset;
     private double targetRobotFwdOffset;
     private double armAngle;
-    private AnalogInput armFFInput;
     private MultipleTelemetry debug;
     private RobotMovement movement;
     public RobotGripper(RobotMovement movement, HardwareMap hwMap, MultipleTelemetry debug) {
@@ -46,7 +45,6 @@ public class RobotGripper {
         leftGripperServo = hwMap.get(CRServo.class, "leftGripper");
         rightGripperServo = hwMap.get(CRServo.class, "rightGripper");
         armServo = hwMap.get(CRServo.class, "armServo");
-        armFFInput = hwMap.analogInput.get("armServoInput");
     }
 
     public void handleGripperUpdate(Gamepad gamepad) {
@@ -87,8 +85,6 @@ public class RobotGripper {
     // Custom PID control for the big arm servo as it uses a gear
     // for reduction and we can't use the internal angle stuff
     public void updateArmPowersPID() {
-        double percent = armFFInput.getVoltage() / armFFInput.getMaxVoltage();
-        double angle = percent * 360;
     }
 
     // Open/close the claws and wait until they are completely open/closed

@@ -50,7 +50,7 @@ public class RobotMovement {
     public static double MAX_MOTOR_VELOCITY_RAD = 2.0 * Math.PI * 6000.0;
 
     public Tuple<DcMotorEx> motors;
-    private MultipleTelemetry debug;
+    private static MultipleTelemetry debug;
     private double setTargetThrottle = 1.0;
 
     public RobotMovement(HardwareMap hwMap, MultipleTelemetry debug) {
@@ -76,8 +76,9 @@ public class RobotMovement {
 
     // Calculate the distance travelled by both left and right wheels for 1 radian using a specific radius
     public static Tuple<Double> calculateTravelledDistance(double radius) {
-        double leftDist = (radius - DIST_MOTORS_M);
-        double rightDist = (radius + DIST_MOTORS_M);
+        double leftDist = Math.abs(radius - DIST_MOTORS_M);
+        double rightDist = Math.abs(radius + DIST_MOTORS_M);
+
         return new Tuple(leftDist, rightDist);
     }
 
@@ -87,6 +88,8 @@ public class RobotMovement {
     public static Tuple<Double> calculateMotorVelocities(double radius, double throttle) {
         throttle = Range.clip(throttle, -1, 1);
         Tuple<Double> distances = calculateTravelledDistance(radius);
+        //debug.addData("left", distances.left);
+        //debug.addData("right", distances.right);
 
         // Normalize speeds to make one always equal 1
         double length = Math.max(Math.abs(distances.left), Math.abs(distances.right));
@@ -185,6 +188,7 @@ public class RobotMovement {
             double radius = calculateArcRadius(gamepad.left_stick_x);
             debug.addData("Arc. Rad", radius);
             double throttle = fetchThrottleCurve(gamepad.left_trigger, gamepad.right_trigger, gamepad.b);
+            debug.addData("Throttle ", throttle);
             res = calculateMotorVelocities(radius, throttle);
         } else {
             debug.addLine("JED CONTROL MODE");

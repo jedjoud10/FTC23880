@@ -22,7 +22,7 @@ public class RobotMovementTest extends TestCase {
         velocities = RobotMovement.calculateMotorVelocities(1.0, 1.0);
         System.out.println(velocities.left);
         System.out.println(velocities.right);
-        velocities = RobotMovement.calculateMotorVelocities(0.1, 1.0);
+        velocities = RobotMovement.calculateMotorVelocities(0.01, 1.0);
         System.out.println(velocities.left);
         System.out.println(velocities.right);
         velocities = RobotMovement.calculateMotorVelocities(-0.01, 1.0);

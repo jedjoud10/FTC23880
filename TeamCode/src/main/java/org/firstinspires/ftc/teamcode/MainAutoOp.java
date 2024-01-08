@@ -66,10 +66,6 @@ public class MainAutoOp extends LinearOpMode {
     private RobotMovement movement;
     private RobotGripper gripper;
     private DistanceSensors distances;
-    private TfodProcessor tfodProcessor;
-    private AprilTagProcessor aprilTagProcessor;
-    private CameraStreamProcessor cameraStreamProcessor;
-    private VisionPortal visionPortal;
 
     private int teamPropIndex = 0; // [left = -1, center = 0, right = 1]
     private IMU imu;
@@ -78,19 +74,22 @@ public class MainAutoOp extends LinearOpMode {
     public void runOpMode() {
         // Initial TFOD, AprilTag processors, webcam, and vision portal
         initHwMap();
-        initTfodProcessor();
-        initAprilTagProcessor();
-        initVisionPortal();
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
+        debug.addLine("Test");
+        movement.moveLine(0.3);
 
+        /*
         // Make square using the robot
         for (int i = 0; i < 4; i++) {
             movement.moveLine(0.3);
             sleep(1000);
             movement.rotate90InPlace(true);
         }
+        */
+
+        /*
 
         sleep(5000);
         movement.moveAround(1.0, 90);
@@ -141,6 +140,8 @@ public class MainAutoOp extends LinearOpMode {
             visionPortal.resumeStreaming();
             visionPortal.resumeLiveView();
         }
+
+         */
     }
 
     private void initHwMap() {
@@ -149,78 +150,6 @@ public class MainAutoOp extends LinearOpMode {
         distances = new DistanceSensors(hardwareMap, debug);
         gripper = new RobotGripper(movement, hardwareMap, debug);
     }
-
-    private void initVisionPortal() {
-        cameraStreamProcessor = new CameraStreamProcessor();
-        WebcamName cam = hardwareMap.get(WebcamName.class, "Webcam 1");
-        visionPortal = new VisionPortal.Builder()
-                .addProcessor(tfodProcessor)
-                .addProcessor(aprilTagProcessor)
-                .addProcessor(cameraStreamProcessor)
-                .setCamera(cam)
-                .enableLiveView(true)
-                .setCameraResolution(new Size(640, 480))
-                .build();
-        FtcDashboard.getInstance().startCameraStream(cameraStreamProcessor, 0);
-    }
-
-    private void initAprilTagProcessor() {
-        aprilTagProcessor = new AprilTagProcessor.Builder()
-                .setDrawAxes(true)
-                .setDrawCubeProjection(true)
-                .setDrawTagID(true)
-                .setLensIntrinsics(822.317, 822.317, 319.495, 242.502)
-                .setOutputUnits(DistanceUnit.CM, AngleUnit.DEGREES)
-                .setDrawTagOutline(true)
-                .build();
-    }
-
-    private void initTfodProcessor() {
-        tfodProcessor = new TfodProcessor.Builder()
-                .build();
-    }
-
-    /**
-     * Add telemetry about AprilTag detections.
-     */
-    private void telemetryAprilTag() {
-        List<AprilTagDetection> currentDetections = aprilTagProcessor.getDetections();
-        debug.addData("# AprilTags Detected", currentDetections.size());
-
-        // Step through the list of detections and display info for each one.
-        for (AprilTagDetection detection : currentDetections) {
-            if (detection.metadata != null) {
-                debug.addLine(String.format("\n==== (ID %d) %s", detection.id, detection.metadata.name));
-                debug.addLine(String.format("XYZ %6.1f %6.1f %6.1f  (inch)", detection.ftcPose.x, detection.ftcPose.y, detection.ftcPose.z));
-                debug.addLine(String.format("PRY %6.1f %6.1f %6.1f  (deg)", detection.ftcPose.pitch, detection.ftcPose.roll, detection.ftcPose.yaw));
-                debug.addLine(String.format("RBE %6.1f %6.1f %6.1f  (inch, deg, deg)", detection.ftcPose.range, detection.ftcPose.bearing, detection.ftcPose.elevation));
-            } else {
-                debug.addLine(String.format("\n==== (ID %d) Unknown", detection.id));
-                debug.addLine(String.format("Center %6.0f %6.0f   (pixels)", detection.center.x, detection.center.y));
-            }
-        }   // end for() loop
-
-    }   // end method telemetryAprilTag()
-
-    /**
-     * Add telemetry about TensorFlow Object Detection (TFOD) recognitions.
-     */
-    private void telemetryTfod() {
-        List<Recognition> currentRecognitions = tfodProcessor.getRecognitions();
-        debug.addData("# Objects Detected", currentRecognitions.size());
-
-        // Step through the list of recognitions and display info for each one.
-        for (Recognition recognition : currentRecognitions) {
-            double x = (recognition.getLeft() + recognition.getRight()) / 2 ;
-            double y = (recognition.getTop()  + recognition.getBottom()) / 2 ;
-
-            debug.addData(""," ");
-            debug.addData("Image", "%s (%.0f %% Conf.)", recognition.getLabel(), recognition.getConfidence() * 100);
-            debug.addData("- Position", "%.0f / %.0f", x, y);
-            debug.addData("- Size", "%.0f x %.0f", recognition.getWidth(), recognition.getHeight());
-        }   // end for() loop
-
-    }   // end method telemetryTfod()
 
     // Place purple pixel and moves to main column to be ready to move to backstage
     // Returns the end map coordinate to feed it to the next step, which is actually *going* to the backstage

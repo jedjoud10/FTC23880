@@ -49,11 +49,11 @@ public class MainTeleOp extends LinearOpMode {
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
             // Handle gripper
-            gripper.handleGripperUpdate(gamepad2);
+            //gripper.handleGripperUpdate(gamepad2);
 
             // Launch servo activation
-            launchServo.setPosition(gamepad1.a ? 0.4 : 0.0);
-            debug.addData("L.S Power", launchServo.getPosition());
+            //launchServo.setPosition(gamepad1.a ? 0.4 : 0.0);
+            //debug.addData("L.S Power", launchServo.getPosition());
 
             movement.handleMovementUpdate(gamepad1);
             debug.update();
