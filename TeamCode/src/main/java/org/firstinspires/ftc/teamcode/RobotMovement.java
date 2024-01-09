@@ -76,8 +76,13 @@ public class RobotMovement {
 
     // Calculate the distance travelled by both left and right wheels for 1 radian using a specific radius
     public static Tuple<Double> calculateTravelledDistance(double radius) {
-        double leftDist = Math.abs(radius - DIST_MOTORS_M);
-        double rightDist = Math.abs(radius + DIST_MOTORS_M);
+        double leftDist = Math.abs(radius) - DIST_MOTORS_M;
+        double rightDist = Math.abs(radius) + DIST_MOTORS_M;
+
+        if (radius < 0.0) {
+            leftDist *= -1;
+            rightDist *= -1;
+        }
 
         return new Tuple(leftDist, rightDist);
     }

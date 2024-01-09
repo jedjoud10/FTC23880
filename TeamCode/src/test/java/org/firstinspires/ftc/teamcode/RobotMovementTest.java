@@ -14,6 +14,17 @@ public class RobotMovementTest extends TestCase {
         System.out.println(distances.right);
     }
 
+    public void testCalculateTravelledDistance2() {
+        System.out.println("Test travelled dist 2");
+        Tuple<Double> distances = RobotMovement.calculateTravelledDistance(1.0);
+        System.out.println(distances.left);
+        System.out.println(distances.right);
+
+        distances = RobotMovement.calculateTravelledDistance(-1.0);
+        System.out.println(distances.left);
+        System.out.println(distances.right);
+    }
+
     public void testCalculateMotorVelocities() {
         System.out.println("Test velocities");
         Tuple<Double> velocities = RobotMovement.calculateMotorVelocities(1.0, 0.0);

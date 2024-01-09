@@ -65,7 +65,6 @@ Near the end go park backstage.
 public class MainAutoOp extends LinearOpMode {
     private RobotMovement movement;
     private RobotGripper gripper;
-    private DistanceSensors distances;
 
     private int teamPropIndex = 0; // [left = -1, center = 0, right = 1]
     private IMU imu;
@@ -147,10 +146,12 @@ public class MainAutoOp extends LinearOpMode {
     private void initHwMap() {
         imu = hardwareMap.get(IMU.class, "imu");
         movement = new RobotMovement(hardwareMap, debug);
-        distances = new DistanceSensors(hardwareMap, debug);
+        //distances = new DistanceSensors(hardwareMap, debug);
         gripper = new RobotGripper(movement, hardwareMap, debug);
     }
 
+
+    /*
     // Place purple pixel and moves to main column to be ready to move to backstage
     // Returns the end map coordinate to feed it to the next step, which is actually *going* to the backstage
     private MapCoord teamPropPlacePurple() {
@@ -283,4 +284,5 @@ public class MainAutoOp extends LinearOpMode {
                 break;
         }
     }
+    */
 }
