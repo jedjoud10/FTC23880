@@ -36,7 +36,12 @@ public class RobotMovement {
     public static double MINOR_THROTTLE_WEIGHT = 0.4;
     public static double POW_CURVE_EXP = 1.0;
     public static double MAIN_THROTTLE_MUL = 0.1;
-    public static double DIST_MOTORS_M = 0.5;
+    public static boolean AUTO_USE_ACCELERATION = true;
+    public static double AUTO_MAIN_THROTTLE = 0.3;
+    public static double AUTO_MAIN_THROTTLE_LERP_ACCEL = 0.7;
+    public static double AUTO_MAIN_PERCENT_THRESHOLD_DEACTIVATE_THROTTLE = 0.1;
+    public static double AUTO_MAIN_MIN_DEACTIVATION_THROTTLE = 0.1;
+    public static double DIST_MOTORS_M = 0.29;
     public static double ARC_RAD_POW = 3;
     public static double ARC_RAD_MAX_TURN_RADIUS = 1.5;
     public static double MIN_ARC_DEADZONE = 0.02;
@@ -158,15 +163,39 @@ public class RobotMovement {
     }
 
     // Set the target tick position for motors and WAIT
+    // Uses throttle accel to avoid wheel slipping. Could be tuned by params
     public void setTargetTickWait(Tuple<Integer> ticks) {
+        motors.left.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+        motors.right.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motors.left.setTargetPosition(ticks.left);
         motors.right.setTargetPosition(ticks.right);
         motors.left.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         motors.right.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        motors.left.setPower(setTargetThrottle);
-        motors.right.setPower(setTargetThrottle);
+        double newTargetThrottle = setTargetThrottle;
+        double newCurrentThrottle = AUTO_MAIN_MIN_DEACTIVATION_THROTTLE;
+
+        if (!AUTO_USE_ACCELERATION) {
+            motors.left.setPower(setTargetThrottle * AUTO_MAIN_THROTTLE);
+            motors.right.setPower(setTargetThrottle * AUTO_MAIN_THROTTLE);
+        }
 
         while(motors.left.isBusy() || motors.right.isBusy()) {
+            if (AUTO_USE_ACCELERATION) {
+                float percentLeft = Math.abs(motors.left.getCurrentPosition() / motors.left.getTargetPosition());
+                float percentRight = Math.abs(motors.right.getCurrentPosition() / motors.right.getTargetPosition());
+                float percent = (percentLeft + percentRight) / 2.0f;
+
+                if (percent > AUTO_MAIN_PERCENT_THRESHOLD_DEACTIVATE_THROTTLE && percent < (1 - AUTO_MAIN_PERCENT_THRESHOLD_DEACTIVATE_THROTTLE)) {
+                    newTargetThrottle = setTargetThrottle;
+                } else {
+                    newTargetThrottle = AUTO_MAIN_MIN_DEACTIVATION_THROTTLE;
+                }
+
+                newCurrentThrottle = newTargetThrottle * AUTO_MAIN_THROTTLE_LERP_ACCEL + newCurrentThrottle * (1 - AUTO_MAIN_THROTTLE_LERP_ACCEL);
+                motors.left.setPower(newCurrentThrottle * AUTO_MAIN_THROTTLE);
+                motors.right.setPower(newCurrentThrottle * AUTO_MAIN_THROTTLE);
+            }
+
             Utils.sleep(10);
         }
     }
@@ -247,7 +276,7 @@ public class RobotMovement {
     public void rotateInPlace(double angle) {
         double rad = angle * Math.PI / 180.0;
         int targetTickLocation = convertWheelDistanceToMotorTickPos(DIST_MOTORS_M * rad);
-        setTargetTickWait(new Tuple(-targetTickLocation, targetTickLocation));
+        setTargetTickWait(new Tuple(-targetTickLocation / 2, targetTickLocation / 2));
     }
 
     // Rotate either 90 deg clockwise/counterclockwise

@@ -77,16 +77,27 @@ public class MainAutoOp extends LinearOpMode {
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
         debug.addLine("Test");
-        movement.moveLine(0.3);
-
+        movement.setTargetTickThrottle(0.8);
+        sleep(1000);
         /*
+        movement.moveLine(0.3);
+        sleep(1000);
+        movement.moveLine(-0.3);
+        sleep(1000);
+        movement.moveLine(1.0);
+        sleep(1000);
+        movement.moveLine(-1.0);
+        sleep(1000);
+        movement.rotate90InPlace(true);
+        */
+
         // Make square using the robot
         for (int i = 0; i < 4; i++) {
-            movement.moveLine(0.3);
-            sleep(1000);
+            movement.moveLine(1.0);
+            sleep(100);
             movement.rotate90InPlace(true);
+            sleep(100);
         }
-        */
 
         /*
 
