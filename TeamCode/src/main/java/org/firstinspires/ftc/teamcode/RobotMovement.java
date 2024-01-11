@@ -234,6 +234,13 @@ public class RobotMovement {
         double rads = angle * Math.PI / 180.0;
         double leftArcLen = convertWheelDistanceToMotorTickPos(rads * (radius - DIST_MOTORS_M));
         double rightArcLen = convertWheelDistanceToMotorTickPos(rads * (radius + DIST_MOTORS_M));
+
+        if (radius < 0.0) {
+            double temp = rightArcLen;
+            rightArcLen = leftArcLen;
+            leftArcLen  = temp;
+        }
+
         setTargetTickWait(new Tuple(leftArcLen, rightArcLen));
     }
 

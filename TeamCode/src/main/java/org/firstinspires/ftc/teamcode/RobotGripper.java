@@ -2,7 +2,6 @@ package org.firstinspires.ftc.teamcode;
 
 import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
-import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -29,11 +28,12 @@ public class RobotGripper {
     }
 
     public static double ARM_LENGTH = 0.40; // todo: MEASURE
+    public static double OFFSET_LEFT = -0.06;
+    public static double OFFSET_RIGHT = -0.047;
     public static double SERVO_ROT_VAL_SPEED = 0.02;
     public static double SERVO_CALC_EPSILON = 0.02;
     private CRServo armServo, leftGripperServo, rightGripperServo;
-    private double currentRight, currentLeft;
-    private double targetRight, targetLeft;
+    private double rightPower, leftPower;
     private double currentRobotFwdOffset;
     private double targetRobotFwdOffset;
     private double armAngle;
@@ -48,28 +48,16 @@ public class RobotGripper {
     }
 
     public void handleGripperUpdate(Gamepad gamepad) {
-        setArmHeight(gamepad.right_stick_y);
-        setGripperTargets(gamepad.left_bumper, gamepad.right_bumper);
+        //setArmHeight(gamepad.right_stick_y);
+        leftPower = gamepad.left_bumper ? 1.0 : 0.0 - gamepad.left_trigger;
+        rightPower = gamepad.right_bumper ? 1.0 : 0.0 - gamepad.right_trigger;
         updateServoPowers();
-        updateArmPowersPID();
-    }
-
-    public void setGripperTargets(boolean left, boolean right) {
-        targetLeft = left ? 1.0 : 0.0;
-        targetRight = right ? 1.0 : 0.0;
+        updateArmPowers(gamepad.right_stick_y);
     }
 
     public void updateServoPowers() {
-        double deltaLeft = currentLeft - targetLeft;
-        double deltaRight = currentRight - targetRight;
-        currentLeft += deltaLeft * SERVO_ROT_VAL_SPEED;
-        currentRight += deltaRight * SERVO_ROT_VAL_SPEED;
-
-        // CR SERVO MODIF: power shifted by -0.06 and -0.047
-        double leftPower = getCrPower(CRServoState.stateFromDelta(deltaLeft), -0.06);
-        double rightPower = getCrPower(CRServoState.stateFromDelta(deltaRight), -0.047);
-        leftGripperServo.setPower(leftPower);
-        rightGripperServo.setPower(rightPower);
+        leftGripperServo.setPower(leftPower + OFFSET_LEFT);
+        rightGripperServo.setPower(rightPower + OFFSET_RIGHT);
     }
 
     // Set height directly. The bot will try to keep it in a straight vertical line.
@@ -82,15 +70,15 @@ public class RobotGripper {
         currentRobotFwdOffset = targetRobotFwdOffset;
     }
 
-    // Custom PID control for the big arm servo as it uses a gear
-    // for reduction and we can't use the internal angle stuff
-    public void updateArmPowersPID() {
+    // Set the power position of the arm
+    public void updateArmPowers(float power) {
+        armServo.setPower(power);
     }
 
     // Open/close the claws and wait until they are completely open/closed
     // If only we didn't have to make the servos continuous. If only.
     public void setGripperTargetsWait(boolean left, boolean right) {
-        setGripperTargets(left, right);
+        //setGripperTargets(left, right);
         while (isBusy()) {
             updateServoPowers();
             Utils.sleep(10);
@@ -98,21 +86,7 @@ public class RobotGripper {
     }
 
     public boolean isBusy() {
-        double deltaLeft = currentLeft - targetLeft;
-        double deltaRight = currentRight - targetRight;
-        return Math.abs(deltaLeft) > SERVO_CALC_EPSILON || Math.abs(deltaRight) > SERVO_CALC_EPSILON;
+        return false;
     }
 
-    public static double getCrPower(CRServoState state, double offset) {
-        switch (state) {
-            case Float:
-                return offset;
-            case Forward:
-                return 1.0;
-            case Reverse:
-                return -1.0;
-            default:
-                return 0.0;
-        }
-    }
 }

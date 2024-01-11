@@ -21,6 +21,7 @@ import android.util.Size;
 
 import com.acmerobotics.dashboard.FtcDashboard;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.hardware.IMU;
@@ -65,9 +66,8 @@ Near the end go park backstage.
 public class MainAutoOp extends LinearOpMode {
     private RobotMovement movement;
     private RobotGripper gripper;
-    private DistanceSensors sensors;
+    private DistanceChecker checker;
     private int teamPropIndex = 0; // [left = -1, center = 0, right = 1]
-    private IMU imu;
     private MultipleTelemetry debug = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
     @Override
     public void runOpMode() {
@@ -76,17 +76,28 @@ public class MainAutoOp extends LinearOpMode {
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
 
-        while(opModeIsActive()) {
-            movement.rotate90InPlace(true);
-            sleep(200);
-            /*
-            movement.moveLine(0.5);
-            sleep(100);
-            movement.moveLine(-0.5);
-            sleep(100);
+        while (opModeIsActive()) {
+            debug.addData("Test: ", checker.checkFront());
             debug.update();
-            */
         }
+        /*
+        movement.moveLine(1.0);
+        movement.moveLine(-1.0);
+        movement.moveAround(1.0, 90.0);
+        movement.moveAround(1.0, -90.0);
+        movement.moveAround(-1.0, 90.0);
+        movement.moveAround(-1.0, -90.0);
+        */
+        /*
+        while(opModeIsActive()) {
+            //movement.rotate90InPlace(true);
+            debug.addData("Dist 0: ", sensors.checkDist(0));
+            debug.addData("Dist 1: ", sensors.checkDist(1));
+            debug.addData("Dist 2: ", sensors.checkDist(2));
+            sensors.readUpdate();
+            debug.update();
+        }
+        */
 
         /*
 
@@ -144,9 +155,14 @@ public class MainAutoOp extends LinearOpMode {
     }
 
     private void initHwMap() {
-        imu = hardwareMap.get(IMU.class, "imu");
+        List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
+
+        for (LynxModule hub : allHubs) {
+            hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
+        }
+
         movement = new RobotMovement(hardwareMap, debug);
-        sensors = new DistanceSensors(hardwareMap, debug);
+        checker = new DistanceChecker(hardwareMap);
         gripper = new RobotGripper(movement, hardwareMap, debug);
     }
 
@@ -156,11 +172,11 @@ public class MainAutoOp extends LinearOpMode {
         // Check center
         int teamPropPosBitMask = 0b111; // left = 2, center = 1, right = 0
         movement.moveLine(Map.TILE_SIZE);
-        teamPropPosBitMask &= (sensors.checkFront() ? 2 : 8);
+        teamPropPosBitMask &= (checker.checkFront() ? 2 : 8);
 
         // Check right
         movement.rotate90InPlace(true);
-        teamPropPosBitMask &= (sensors.checkFront() ? 1 : 8);
+        teamPropPosBitMask &= (checker.checkFront() ? 1 : 8);
 
         // No need to check left as we KNOW it is on the left (or not at all)
         // Convert to index [left, center, right]
@@ -252,7 +268,7 @@ public class MainAutoOp extends LinearOpMode {
         movement.moveHorizontal(horizontalDelta * Map.PIXEL_OUTER_SIZE, 0.02, 45);
         gripper.setArmHeight(0.0);
 
-        while (!sensors.checkFront()) {
+        while (!checker.checkFront()) {
             movement.moveLine(0.03);
         }
 
@@ -263,7 +279,7 @@ public class MainAutoOp extends LinearOpMode {
     private void pickupWhitePixels() {
         movement.moveLine(Map.TILE_SIZE * 0.9);
         gripper.setGripperTargetsWait(false, false);
-        movement.moveLine(Map.TILE_SIZE * 0.9);
+        movement.moveLine(-Map.TILE_SIZE * 0.9);
     }
 
     // Park the bot. Either to the corner or the other wing. Assumes the bot is E5-N state
