@@ -8,13 +8,14 @@ import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 import com.qualcomm.robotcore.hardware.Gamepad;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.Range;
 
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 /*
 https://www.desmos.com/calculator/c6kk0ujwvz
-We actually don't need to do any of this since we noralize it at the end
+We actually don't need to do any of this since we normalize it at the end
 ¯\_(ツ)_/¯
 
 // Convert these arc lengths to revolutions of wheel for 1 radian
@@ -30,33 +31,33 @@ double rightMotorRot = rightWheelRot * MOTOR_REV_PER_WHEEL_REV;
 // All values in metric
 @Config
 public class RobotMovement {
-    // Public constants that can be modified through FTC dashboard
-    public static boolean BRAKING_ENABLED = false;
+    public static double LEFT_P = 10.0;
+    public static double RIGHT_P = 10.0;
+    public static double LEFT_I = 5.0;
+    public static double RIGHT_I = 3.0;
+    public static double LEFT_D = 0.0;
+    public static double RIGHT_D = 0.0;
+    public static double LEFT_F = 0.0;
+    public static double RIGHT_F = 0.0;
+    public static double LEFT_POSITION_P = 1.985;
+    public static double RIGHT_POSITION_P = 2.0;
     public static double MAJOR_THROTTLE_WEIGHT = 2.0;
-    public static double MINOR_THROTTLE_WEIGHT = 0.4;
+    public static double MINOR_THROTTLE_WEIGHT = 0.16;
     public static double POW_CURVE_EXP = 1.0;
-    public static double MAIN_THROTTLE_MUL = 0.1;
-    public static boolean AUTO_USE_ACCELERATION = true;
-    public static double AUTO_MAIN_THROTTLE = 0.3;
-    public static double AUTO_MAIN_THROTTLE_LERP_ACCEL = 0.7;
-    public static double AUTO_MAIN_PERCENT_THRESHOLD_DEACTIVATE_THROTTLE = 0.1;
-    public static double AUTO_MAIN_MIN_DEACTIVATION_THROTTLE = 0.1;
+    public static double MAIN_THROTTLE_MUL = 0.002;
     public static double DIST_MOTORS_M = 0.29;
-    public static double ARC_RAD_POW = 3;
+    public static double ARC_RAD_POW = 1.5;
     public static double ARC_RAD_MAX_TURN_RADIUS = 1.5;
     public static double MIN_ARC_DEADZONE = 0.02;
     public static double WHEEL_CIRCUMFERENCE = 2 * Math.PI * 0.045;
     public static double MOTOR_REV_PER_WHEEL_REV = 3.61 * 5.23;
     public static double ENCODER_COUNTS_PER_MOTOR_REV = 28;
-    private boolean driveMode = true;
-    private boolean switched = false;
 
     // Per the REV docs, max speed of the motor is 6000 rpm
     public static double MAX_MOTOR_VELOCITY_RAD = 2.0 * Math.PI * 6000.0;
 
     public Tuple<DcMotorEx> motors;
     private static MultipleTelemetry debug;
-    private double setTargetThrottle = 1.0;
 
     public RobotMovement(HardwareMap hwMap, MultipleTelemetry debug) {
         DcMotorEx leftMotor = hwMap.get(DcMotorEx.class, "motor3");
@@ -66,27 +67,24 @@ public class RobotMovement {
         rightMotor.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         leftMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
         rightMotor.setMode(DcMotor.RunMode.RUN_USING_ENCODER);
-
-        if (BRAKING_ENABLED) {
-            leftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-            rightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-        } else {
-            leftMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-            rightMotor.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.FLOAT);
-        }
-
         this.motors = new Tuple(leftMotor, rightMotor);
         this.debug = debug;
     }
 
     // Calculate the distance travelled by both left and right wheels for 1 radian using a specific radius
     public static Tuple<Double> calculateTravelledDistance(double radius) {
+        /*
+        double leftDist = radius - DIST_MOTORS_M;
+        double rightDist = radius + DIST_MOTORS_M;
+        return new Tuple(leftDist, rightDist);
+        */
         double leftDist = Math.abs(radius) - DIST_MOTORS_M;
         double rightDist = Math.abs(radius) + DIST_MOTORS_M;
 
         if (radius < 0.0) {
-            leftDist *= -1;
-            rightDist *= -1;
+            double temp = rightDist;
+            rightDist = leftDist;
+            leftDist = temp;
         }
 
         return new Tuple(leftDist, rightDist);
@@ -129,7 +127,7 @@ public class RobotMovement {
         //double arcRad = Math.min(ARC_RAD_G_OFFSET / Math.pow(horizontalStickRaw, 0.4), 1000) - ARC_RAD_G_OFFSET;
         //debug.addData("H.Stick Signed Squared", horizontalStick);
         //float arcRadius = -(float)(Math.min(1.0D / (horizontalStick*4+0.00001), 1000.0D));
-        raw = MathUtils.clamp(raw, -1, 1);
+        raw = MathUtils.clamp(-raw, -1, 1);
         double arcRad = Math.signum(raw) - 0.91 * raw;
 
         // allow us to use any power
@@ -158,8 +156,8 @@ public class RobotMovement {
     // Apply velocities to the motors (velocity in rad/s)
     // Should only be used for driving manually
     public void applyVelocities(Tuple<Double> velocities) {
-        motors.left.setVelocity(velocities.left, AngleUnit.RADIANS);
-        motors.right.setVelocity(velocities.right, AngleUnit.RADIANS);
+        motors.left.setVelocity(-velocities.left, AngleUnit.RADIANS);
+        motors.right.setVelocity(-velocities.right, AngleUnit.RADIANS);
     }
 
     // Set the target tick position for motors and WAIT
@@ -167,69 +165,36 @@ public class RobotMovement {
     public void setTargetTickWait(Tuple<Integer> ticks) {
         motors.left.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
         motors.right.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-        motors.left.setTargetPosition(ticks.left);
-        motors.right.setTargetPosition(ticks.right);
+        motors.left.setTargetPosition(-ticks.left);
+        motors.right.setTargetPosition(-ticks.right);
         motors.left.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         motors.right.setMode(DcMotor.RunMode.RUN_TO_POSITION);
-        double newTargetThrottle = setTargetThrottle;
-        double newCurrentThrottle = AUTO_MAIN_MIN_DEACTIVATION_THROTTLE;
+        motors.left.setVelocityPIDFCoefficients(LEFT_P, LEFT_I, LEFT_D, LEFT_F);
+        motors.right.setVelocityPIDFCoefficients(RIGHT_P, RIGHT_I, RIGHT_D, RIGHT_F);
+        motors.left.setPositionPIDFCoefficients(LEFT_POSITION_P);
+        motors.right.setPositionPIDFCoefficients(RIGHT_POSITION_P);
 
-        if (!AUTO_USE_ACCELERATION) {
-            motors.left.setPower(setTargetThrottle * AUTO_MAIN_THROTTLE);
-            motors.right.setPower(setTargetThrottle * AUTO_MAIN_THROTTLE);
-        }
-
-        while(motors.left.isBusy() || motors.right.isBusy()) {
-            if (AUTO_USE_ACCELERATION) {
-                float percentLeft = Math.abs(motors.left.getCurrentPosition() / motors.left.getTargetPosition());
-                float percentRight = Math.abs(motors.right.getCurrentPosition() / motors.right.getTargetPosition());
-                float percent = (percentLeft + percentRight) / 2.0f;
-
-                if (percent > AUTO_MAIN_PERCENT_THRESHOLD_DEACTIVATE_THROTTLE && percent < (1 - AUTO_MAIN_PERCENT_THRESHOLD_DEACTIVATE_THROTTLE)) {
-                    newTargetThrottle = setTargetThrottle;
-                } else {
-                    newTargetThrottle = AUTO_MAIN_MIN_DEACTIVATION_THROTTLE;
-                }
-
-                newCurrentThrottle = newTargetThrottle * AUTO_MAIN_THROTTLE_LERP_ACCEL + newCurrentThrottle * (1 - AUTO_MAIN_THROTTLE_LERP_ACCEL);
-                motors.left.setPower(newCurrentThrottle * AUTO_MAIN_THROTTLE);
-                motors.right.setPower(newCurrentThrottle * AUTO_MAIN_THROTTLE);
-            }
-
+        while(motors.left.isBusy() && motors.right.isBusy()) {
+            float percentLeft = Math.abs((float)motors.left.getCurrentPosition() / -ticks.left);
+            float percentRight = Math.abs((float)motors.right.getCurrentPosition() / -ticks.right);
+            debug.addData("Left: ", percentLeft);
+            debug.addData("Right: ", percentRight);
+            debug.update();
             Utils.sleep(10);
         }
     }
 
-    // Set main throttle for setTargetTickWait method
-    public void setTargetTickThrottle(double throttle) {
-        setTargetThrottle = throttle;
-    }
-
     // Move the robot using the given gamepad input (each update tick)
     public void handleMovementUpdate(Gamepad gamepad) {
-        // Swap drive mode when pressing the X button
-        if (gamepad.x && !switched) {
-            switched = true;
-            driveMode = !driveMode;
-        } else if (!gamepad.x) {
-            switched = false;
-        }
 
         // Main robot chassis drive code
         Tuple<Double> res;
-        if (driveMode) {
-            debug.addLine("NEIL CONTROL MODE");
-            double radius = calculateArcRadius(gamepad.left_stick_x);
-            debug.addData("Arc. Rad", radius);
-            double throttle = fetchThrottleCurve(gamepad.left_trigger, gamepad.right_trigger, gamepad.b);
-            debug.addData("Throttle ", throttle);
-            res = calculateMotorVelocities(radius, throttle);
-        } else {
-            debug.addLine("JED CONTROL MODE");
-            double radius = calculateArcRadius(gamepad.left_stick_x);
-            double throttle = fetchThrottleCurve(gamepad.left_stick_y, 0.0, false);
-            res = calculateMotorVelocities(radius, throttle);
-        }
+        double radius = calculateArcRadius(gamepad.left_stick_x);
+        debug.addData("Arc. Rad", radius);
+        double throttle = fetchThrottleCurve(gamepad.right_trigger, gamepad.left_trigger, gamepad.b);
+        debug.addData("Throttle ", throttle);
+        res = calculateMotorVelocities(radius, throttle);
+
 
         res.left *= MAIN_THROTTLE_MUL;
         res.right *= MAIN_THROTTLE_MUL;

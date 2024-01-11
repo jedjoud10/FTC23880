@@ -18,8 +18,11 @@ import org.firstinspires.ftc.robotcore.internal.webserver.websockets.CommandNotI
 // Two on the front, maybe at an angle to detect custom object more easily
 @Config
 public class DistanceSensors {
-    public static int NUM_SENSORS = 4;
-    public static double MIN_DIST_TO_DETECT = 0.02;
+    public static int NUM_SENSORS = 3;
+    public static double MIN_DIST_TO_DETECT = 0.06;
+    public static int SAMPLE_DELAY = 5;
+    public static int CHECK_DIST_DELAY = 20;
+    public static int SAMPLE_COUNT = 4;
     private Multiplexer mux;
     private Sensor4742 us;
     private MultipleTelemetry debug;
@@ -28,22 +31,34 @@ public class DistanceSensors {
         mux = hwMap.get(Multiplexer.class, "mux");
         us = hwMap.get(Sensor4742.class, "us");
 
-        // Loop over the ports activating each color sensor
         for (int i = 0; i < NUM_SENSORS; i++) {
-            mux.setTarget(i);
-            debug.addData("Dist-Sensor " + i, us.readDistance());
+            mux.getDeviceClient().engage();
+            mux.setTargetRead(i);
+            mux.getDeviceClient().disengage();
+
+            us.getDeviceClient().engage();
+            us.enable();
+            us.getDeviceClient().disengage();
+            mux.getDeviceClient().engage();
         }
     }
 
     // Check if there's something in front of the bot (pixel / custom)
     public boolean checkFront() {
-        double avg = checkDist(0) + checkDist(1);
-        return (avg / 2.0) < MIN_DIST_TO_DETECT;
+        return checkDist(0) < MIN_DIST_TO_DETECT;
     }
 
     // Check the distance in front of a sensor
-    // Could change implementation to make it sample multiple times, wait, and get rid of outliers (depends on how good the sensors are)
     public double checkDist(int index) {
-        return 0.0;
+        Utils.sleep(CHECK_DIST_DELAY);
+        mux.getDeviceClient().engage();
+        mux.setTargetRead(index);
+        mux.getDeviceClient().disengage();
+
+        us.getDeviceClient().engage();
+        double dist = us.readDistance(SAMPLE_DELAY, SAMPLE_COUNT);
+        us.getDeviceClient().disengage();
+        mux.getDeviceClient().engage();
+        return dist;
     }
 }

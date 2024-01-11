@@ -22,17 +22,11 @@ import com.acmerobotics.dashboard.config.Config;
 import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.CRServo;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple.Direction;
 import com.qualcomm.robotcore.hardware.Servo;
-
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 @TeleOp
 @Config
-public class MainTeleOp extends LinearOpMode {
+public class TestTeleOpAsAutoOp extends LinearOpMode {
     private RobotMovement movement;
     private RobotGripper gripper;
     private Servo launchServo;
@@ -46,16 +40,12 @@ public class MainTeleOp extends LinearOpMode {
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
 
-        // run until the end of the match (driver presses STOP)
-        while (opModeIsActive()) {
-            // Handle gripper
-            //gripper.handleGripperUpdate(gamepad2);
-
-            // Launch servo activation
-            boolean launch = gamepad1.a && gamepad1.dpad_left;
-            launchServo.setPosition(launch ? 0.4 : 0.0);
-
-            movement.handleMovementUpdate(gamepad1);
+        // Make square using the robot
+        for (int i = 0; i < 4; i++) {
+            movement.moveLine(1.0);
+            sleep(100);
+            movement.rotate90InPlace(true);
+            sleep(100);
             debug.update();
         }
     }

@@ -65,38 +65,27 @@ Near the end go park backstage.
 public class MainAutoOp extends LinearOpMode {
     private RobotMovement movement;
     private RobotGripper gripper;
-
+    private DistanceSensors sensors;
     private int teamPropIndex = 0; // [left = -1, center = 0, right = 1]
     private IMU imu;
     private MultipleTelemetry debug = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
     @Override
     public void runOpMode() {
-        // Initial TFOD, AprilTag processors, webcam, and vision portal
         initHwMap();
 
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
-        debug.addLine("Test");
-        movement.setTargetTickThrottle(0.8);
-        sleep(1000);
-        /*
-        movement.moveLine(0.3);
-        sleep(1000);
-        movement.moveLine(-0.3);
-        sleep(1000);
-        movement.moveLine(1.0);
-        sleep(1000);
-        movement.moveLine(-1.0);
-        sleep(1000);
-        movement.rotate90InPlace(true);
-        */
 
-        // Make square using the robot
-        for (int i = 0; i < 4; i++) {
-            movement.moveLine(1.0);
-            sleep(100);
+        while(opModeIsActive()) {
             movement.rotate90InPlace(true);
+            sleep(200);
+            /*
+            movement.moveLine(0.5);
             sleep(100);
+            movement.moveLine(-0.5);
+            sleep(100);
+            debug.update();
+            */
         }
 
         /*
@@ -157,23 +146,21 @@ public class MainAutoOp extends LinearOpMode {
     private void initHwMap() {
         imu = hardwareMap.get(IMU.class, "imu");
         movement = new RobotMovement(hardwareMap, debug);
-        //distances = new DistanceSensors(hardwareMap, debug);
+        sensors = new DistanceSensors(hardwareMap, debug);
         gripper = new RobotGripper(movement, hardwareMap, debug);
     }
 
-
-    /*
     // Place purple pixel and moves to main column to be ready to move to backstage
     // Returns the end map coordinate to feed it to the next step, which is actually *going* to the backstage
     private MapCoord teamPropPlacePurple() {
         // Check center
         int teamPropPosBitMask = 0b111; // left = 2, center = 1, right = 0
         movement.moveLine(Map.TILE_SIZE);
-        teamPropPosBitMask &= (distances.checkFront() ? 2 : 8);
+        teamPropPosBitMask &= (sensors.checkFront() ? 2 : 8);
 
         // Check right
         movement.rotate90InPlace(true);
-        teamPropPosBitMask &= (distances.checkFront() ? 1 : 8);
+        teamPropPosBitMask &= (sensors.checkFront() ? 1 : 8);
 
         // No need to check left as we KNOW it is on the left (or not at all)
         // Convert to index [left, center, right]
@@ -253,7 +240,6 @@ public class MainAutoOp extends LinearOpMode {
     // Align the robot with the corresponding drop column (team prop spike mark pos) if neede
 
     private void alignDropColumnAndDrop(boolean yellowPixel) {
-        movement.setTargetTickThrottle(0.2);
         movement.moveLine(0.2);
 
         double horizontalDelta = 0.0;
@@ -266,7 +252,7 @@ public class MainAutoOp extends LinearOpMode {
         movement.moveHorizontal(horizontalDelta * Map.PIXEL_OUTER_SIZE, 0.02, 45);
         gripper.setArmHeight(0.0);
 
-        while (!distances.checkFront()) {
+        while (!sensors.checkFront()) {
             movement.moveLine(0.03);
         }
 
@@ -277,9 +263,7 @@ public class MainAutoOp extends LinearOpMode {
     private void pickupWhitePixels() {
         movement.moveLine(Map.TILE_SIZE * 0.9);
         gripper.setGripperTargetsWait(false, false);
-        movement.setTargetTickThrottle(0.2);
         movement.moveLine(Map.TILE_SIZE * 0.9);
-        movement.setTargetTickThrottle(1.0);
     }
 
     // Park the bot. Either to the corner or the other wing. Assumes the bot is E5-N state
@@ -295,5 +279,4 @@ public class MainAutoOp extends LinearOpMode {
                 break;
         }
     }
-    */
 }
