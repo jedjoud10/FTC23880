@@ -11,6 +11,7 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.PIDFCoefficients;
 import com.qualcomm.robotcore.util.Range;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
 
 /*
@@ -31,16 +32,20 @@ double rightMotorRot = rightWheelRot * MOTOR_REV_PER_WHEEL_REV;
 // All values in metric
 @Config
 public class RobotMovement {
+    /*
     public static double LEFT_P = 10.0;
     public static double RIGHT_P = 10.0;
-    public static double LEFT_I = 5.0;
+    public static double LEFT_I = 3.0;
     public static double RIGHT_I = 3.0;
     public static double LEFT_D = 0.0;
     public static double RIGHT_D = 0.0;
     public static double LEFT_F = 0.0;
     public static double RIGHT_F = 0.0;
-    public static double LEFT_POSITION_P = 1.985;
+    public static double LEFT_POSITION_P = 2;
     public static double RIGHT_POSITION_P = 2.0;
+    */
+    public static double AUTO_MAIN_THROTTLE_LEFT = 0.3;
+    public static double AUTO_MAIN_THROTTLE_RIGHT = 0.3;
     public static double MAJOR_THROTTLE_WEIGHT = 2.0;
     public static double MINOR_THROTTLE_WEIGHT = 0.16;
     public static double POW_CURVE_EXP = 1.0;
@@ -57,9 +62,9 @@ public class RobotMovement {
     public static double MAX_MOTOR_VELOCITY_RAD = 2.0 * Math.PI * 6000.0;
 
     public Tuple<DcMotorEx> motors;
-    private static MultipleTelemetry debug;
+    private static Telemetry debug;
 
-    public RobotMovement(HardwareMap hwMap, MultipleTelemetry debug) {
+    public RobotMovement(HardwareMap hwMap, Telemetry debug) {
         DcMotorEx leftMotor = hwMap.get(DcMotorEx.class, "motor3");
         leftMotor.setDirection(DcMotorSimple.Direction.REVERSE);
         DcMotorEx rightMotor = hwMap.get(DcMotorEx.class, "motor2");
@@ -169,17 +174,21 @@ public class RobotMovement {
         motors.right.setTargetPosition(-ticks.right);
         motors.left.setMode(DcMotor.RunMode.RUN_TO_POSITION);
         motors.right.setMode(DcMotor.RunMode.RUN_TO_POSITION);
+        motors.left.setPower(AUTO_MAIN_THROTTLE_LEFT);
+        motors.right.setPower(AUTO_MAIN_THROTTLE_RIGHT);
+        /*
         motors.left.setVelocityPIDFCoefficients(LEFT_P, LEFT_I, LEFT_D, LEFT_F);
         motors.right.setVelocityPIDFCoefficients(RIGHT_P, RIGHT_I, RIGHT_D, RIGHT_F);
         motors.left.setPositionPIDFCoefficients(LEFT_POSITION_P);
         motors.right.setPositionPIDFCoefficients(RIGHT_POSITION_P);
+        */
 
         while(motors.left.isBusy() && motors.right.isBusy()) {
             float percentLeft = Math.abs((float)motors.left.getCurrentPosition() / -ticks.left);
             float percentRight = Math.abs((float)motors.right.getCurrentPosition() / -ticks.right);
-            debug.addData("Left: ", percentLeft);
-            debug.addData("Right: ", percentRight);
-            debug.update();
+            //debug.addData("Left: ", percentLeft);
+            //debug.addData("Right: ", percentRight);
+            //debug.update();
             Utils.sleep(10);
         }
     }
@@ -225,6 +234,8 @@ public class RobotMovement {
 
     // Move the robot forward / backwards using a specific distance
     public void moveLine(double distance) {
+        debug.addData("Move line ", distance);
+        debug.update();
         int targetTickLocation = convertWheelDistanceToMotorTickPos(distance);
         setTargetTickWait(new Tuple(targetTickLocation, targetTickLocation));
     }
@@ -246,9 +257,11 @@ public class RobotMovement {
 
     // Turn the robot in place with a specific angle
     public void rotateInPlace(double angle) {
+        debug.addData("Rotate in place ", angle);
+        debug.update();
         double rad = angle * Math.PI / 180.0;
         int targetTickLocation = convertWheelDistanceToMotorTickPos(DIST_MOTORS_M * rad);
-        setTargetTickWait(new Tuple(-targetTickLocation / 2, targetTickLocation / 2));
+        setTargetTickWait(new Tuple(targetTickLocation / 2, -targetTickLocation / 2));
     }
 
     // Rotate either 90 deg clockwise/counterclockwise

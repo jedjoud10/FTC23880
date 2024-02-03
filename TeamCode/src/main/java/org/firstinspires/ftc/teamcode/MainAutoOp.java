@@ -17,23 +17,13 @@ DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 */
 package org.firstinspires.ftc.teamcode;
-import android.util.Size;
 
-import com.acmerobotics.dashboard.FtcDashboard;
-import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
-import com.qualcomm.robotcore.hardware.IMU;
 
-import org.firstinspires.ftc.robotcore.external.hardware.camera.WebcamName;
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.tfod.Recognition;
-import org.firstinspires.ftc.vision.VisionPortal;
-import org.firstinspires.ftc.vision.apriltag.AprilTagDetection;
-import org.firstinspires.ftc.vision.apriltag.AprilTagProcessor;
-import org.firstinspires.ftc.vision.tfod.TfodProcessor;
 
 import java.util.List;
 
@@ -54,7 +44,7 @@ Looking for avg 30 pixels in auto)
 2. Go to backdrop to saved pos and place yellow pixel there (20p)
 3. Park (5p)
 
-Gonna make it detect the location of white pixel / team prop and place purple pixel there. Basically make it go forward, check using cam if the pixel is there, if not, rotate (+- 90 deg), check again, and place.
+Gonna make it detect the location of white pixel / team prop and place purple pixel there. Basically make it go forward, check using cam if the pixel is there, if not, ro+tate (+- 90 deg), check again, and place.
 Make it pick up white pixels from back, then move to the backdrop and place pixels (white + yellow).
 If I have enough time make another round trip and place 2 more pixels.
 Near the end go park backstage.
@@ -62,13 +52,12 @@ Near the end go park backstage.
 */
 
 @Autonomous
-
 public class MainAutoOp extends LinearOpMode {
     private RobotMovement movement;
     private RobotGripper gripper;
     private DistanceChecker checker;
     private int teamPropIndex = 0; // [left = -1, center = 0, right = 1]
-    private MultipleTelemetry debug = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
+    private Telemetry debug = telemetry;
     @Override
     public void runOpMode() {
         initHwMap();
@@ -76,54 +65,14 @@ public class MainAutoOp extends LinearOpMode {
         // Wait for the game to start (driver presses PLAY)
         waitForStart();
 
-        while (opModeIsActive()) {
-            debug.addData("Test: ", checker.checkFront());
-            debug.update();
-        }
-        /*
-        movement.moveLine(1.0);
-        movement.moveLine(-1.0);
-        movement.moveAround(1.0, 90.0);
-        movement.moveAround(1.0, -90.0);
-        movement.moveAround(-1.0, 90.0);
-        movement.moveAround(-1.0, -90.0);
-        */
-        /*
-        while(opModeIsActive()) {
-            //movement.rotate90InPlace(true);
-            debug.addData("Dist 0: ", sensors.checkDist(0));
-            debug.addData("Dist 1: ", sensors.checkDist(1));
-            debug.addData("Dist 2: ", sensors.checkDist(2));
-            sensors.readUpdate();
-            debug.update();
-        }
-        */
+        movement.moveLine(DistanceUnit.METER .fromInches(28.5));
+
+        // Place purple pixel on team prop (20p)
+        //checkTeamPropAndPlace();
+
+        //MapCoord coord = teamPropPlacePurple();
 
         /*
-
-        sleep(5000);
-        movement.moveAround(1.0, 90);
-        sleep(5000);
-        movement.moveAround(-1.0, 90);
-        sleep(5000);
-        movement.rotate90InPlace(false);
-        sleep(5000);
-        movement.rotate180InPlace(false);
-        sleep(5000);
-        movement.moveHorizontal(1, 1, 30);
-        sleep(5000);
-        movement.moveHorizontal(1, 1, 45);
-        sleep(5000);
-        movement.moveHorizontal(1, 1, 60);
-        sleep(5000);
-        for (int i = 0; i < 10; i++) {
-            movement.moveHorizontal(0.1, 0.1, 45);
-        }
-
-
-        // Place purple pixel on team prop (20p), align to backstage
-        MapCoord coord = teamPropPlacePurple();
-
         // Move to backstage (if necessary)
         moveBackstage(coord);
 
@@ -150,7 +99,6 @@ public class MainAutoOp extends LinearOpMode {
             visionPortal.resumeStreaming();
             visionPortal.resumeLiveView();
         }
-
          */
     }
 
@@ -161,27 +109,137 @@ public class MainAutoOp extends LinearOpMode {
             hub.setBulkCachingMode(LynxModule.BulkCachingMode.AUTO);
         }
 
+        debug.setAutoClear(false);
         movement = new RobotMovement(hardwareMap, debug);
-        checker = new DistanceChecker(hardwareMap);
+        checker = new DistanceChecker(hardwareMap, debug);
         gripper = new RobotGripper(movement, hardwareMap, debug);
+    }
+
+    // Place the purple pixel on the team prop
+    private void checkTeamPropAndPlace() {
+        movement.moveLine(AutoMeasurements.FIRST_LINE_MOVE);
+
+        debug.addLine("Check mid");
+        debug.update();
+        if (checker.checkFront()) {
+            debug.addLine("Middle it is!");
+            debug.update();
+            movement.moveLine(-AutoMeasurements.MID_PIXEL_SHIFT);
+            movement.rotateInPlace(-AutoMeasurements.MID_PIXEL_ANGLE);
+            movement.moveLine(AutoMeasurements.MID_PIXEL_AFTER_SHIFT);
+            releasePixelOnTeamProp();
+            sleep(100);
+            unreleaseArm();
+
+            /*
+            movement.moveLine(-AutoMeasurements.MID_PIXEL_AFTER_SHIFT);
+            movement.rotateInPlace(AutoMeasurements.MID_PIXEL_ANGLE);
+            movement.moveLine(AutoMeasurements.MID_PIXEL_SHIFT);
+            movement.rotateInPlace(AutoMeasurements.MID_REVERT_MARGIN_ANGLE);
+
+            movement.moveLine(-AutoMeasurements.FIRST_LINE_MOVE * 1.05);
+
+            movement.moveLine(AutoMeasurements.REVERT_MID_MARGIN_DIST_OFF_WALL);
+            movement.rotateInPlace(AutoMeasurements.FIRST_ROTATE_ANGLE);
+            sleep(100);
+            movement.moveLine(AutoMeasurements.REVERT_MID_ANGLE_DIST);
+            sleep(100);
+            movement.rotateInPlace(-AutoMeasurements.SECOND_ROTATE_ANGLE);
+            sleep(100);
+            movement.moveLine(AutoMeasurements.REVERT_MID_WHILE_WALL_DIST);
+            movement.rotateInPlace(AutoMeasurements.LAST_LAST_LAST_LAST_ANGLE_SHIT);
+            movement.moveLine(AutoMeasurements.REVERT_MID_BOARD_GOING_DIST);
+            */
+            return;
+        }
+
+        movement.moveLine(AutoMeasurements.IS_NOT_MID_MOVE_BACKWARD);
+        movement.rotateInPlace(AutoMeasurements.CHECK_RIGHT_ANGLE);
+        movement.moveLine(AutoMeasurements.SECOND_DISTANCE_AFTER_ANGLE);
+        sleep(1000);
+
+        debug.addLine("Check right");
+        debug.update();
+        if (checker.checkFront()) {
+            debug.addLine("Right it is!");
+            debug.update();
+            movement.moveLine(AutoMeasurements.LAST_LINE_SHIFT_RIGHT);
+
+            gripper.armServo.setPower(AutoMeasurements.ARM_EXPAND_POWER);
+            sleep(AutoMeasurements.ARM_EXPAND_TIME);
+            gripper.armServo.setPower(AutoMeasurements.ARM_EXPAND_HOLD_INV);
+            sleep(100);
+
+            movement.moveLine(AutoMeasurements.LAST_LAST_LAST_DISTANCE_SHIT);
+            movement.rotateInPlace(AutoMeasurements.LAST_LAST_ANGLE_SHIT);
+
+            gripper.leftPower = AutoMeasurements.CLAMP_OPEN_POWER;
+            gripper.updateServoPowers();
+            sleep(AutoMeasurements.CLAMP_OPEN_TIME);
+            gripper.leftPower = 0;
+            unreleaseArm();
+
+            /*
+            movement.rotateInPlace(-AutoMeasurements.LAST_LAST_ANGLE_SHIT);
+            movement.moveLine(-AutoMeasurements.LAST_LAST_LAST_DISTANCE_SHIT);
+            movement.moveLine(-AutoMeasurements.LAST_LINE_SHIFT_RIGHT);
+
+            movement.moveLine(-AutoMeasurements.SECOND_DISTANCE_AFTER_ANGLE);
+            movement.rotateInPlace(-AutoMeasurements.CHECK_RIGHT_ANGLE);
+            movement.moveLine(-AutoMeasurements.IS_NOT_MID_MOVE_BACKWARD);
+            movement.moveLine(0.2);
+            movement.rotate90InPlace(true);
+            movement.moveLine(100);
+
+
+             */
+            return;
+        }
+
+        sleep(1000);
+        debug.addLine("Left it is!");
+        movement.moveLine(-AutoMeasurements.LEFT_SIDE_FINAL_DIST_KYS);
+        movement.rotateInPlace(AutoMeasurements.LEFT_SIDE_FINAL_ANGLE);
+        releasePixelOnTeamProp();
+        unreleaseArm();
+        /*
+        movement.rotateInPlace(-AutoMeasurements.LEFT_SIDE_FINAL_ANGLE);
+        movement.moveLine(AutoMeasurements.LEFT_SIDE_FINAL_DIST_KYS);
+
+        movement.moveLine(-AutoMeasurements.SECOND_DISTANCE_AFTER_ANGLE);
+        movement.rotateInPlace(-AutoMeasurements.CHECK_RIGHT_ANGLE);
+        movement.moveLine(-AutoMeasurements.IS_NOT_MID_MOVE_BACKWARD);
+
+        movement.moveLine(0.2);
+        movement.rotate90InPlace(true);
+        movement.moveLine(100);
+
+         */
+    }
+
+    private void releasePixelOnTeamProp() {
+        gripper.armServo.setPower(AutoMeasurements.ARM_EXPAND_POWER);
+        sleep(AutoMeasurements.ARM_EXPAND_TIME);
+        gripper.armServo.setPower(AutoMeasurements.ARM_EXPAND_HOLD_INV);
+        sleep(100);
+        gripper.leftPower = AutoMeasurements.CLAMP_OPEN_POWER;
+        gripper.updateServoPowers();
+        sleep(AutoMeasurements.CLAMP_OPEN_TIME);
+        gripper.leftPower = 0;
+        gripper.updateServoPowers();
+    }
+
+    private void unreleaseArm() {
+        gripper.armServo.setPower(-AutoMeasurements.ARM_EXPAND_POWER);
+        sleep(AutoMeasurements.ARM_RETRACT_TIME);
     }
 
     // Place purple pixel and moves to main column to be ready to move to backstage
     // Returns the end map coordinate to feed it to the next step, which is actually *going* to the backstage
-    private MapCoord teamPropPlacePurple() {
-        // Check center
-        int teamPropPosBitMask = 0b111; // left = 2, center = 1, right = 0
-        movement.moveLine(Map.TILE_SIZE);
-        teamPropPosBitMask &= (checker.checkFront() ? 2 : 8);
+    private MapCoord goToMainAfterPurple() {
 
-        // Check right
-        movement.rotate90InPlace(true);
-        teamPropPosBitMask &= (checker.checkFront() ? 1 : 8);
 
-        // No need to check left as we KNOW it is on the left (or not at all)
-        // Convert to index [left, center, right]
-        teamPropIndex = Integer.numberOfLeadingZeros(teamPropPosBitMask) - 1;
-
+        /*
         // ------------------------------------------------------------------
         // STRATEGY FOR F2-E2
         // If it is in the center, place, maneuver back, go main D. D2-N
@@ -193,11 +251,13 @@ public class MainAutoOp extends LinearOpMode {
         // If it is in the center, place, face backstage, get to backstage. E4-N
         // If it is in the right, do funky maneuver. E5-N
         // If it is in the left, place, face backstage, and get to backstage. E4-N
+        Utils.addLine("Switch on starting pos");
         switch (AutoStrategy.STARTING_POS) {
             case F2:
                 switch (teamPropIndex) {
                     case -1:
                     case 1:
+                        Utils.addLine("F2 Team prop index 1");
                         // Face forward (perp to backstage)
                         movement.rotate90InPlace(false);
 
@@ -206,6 +266,7 @@ public class MainAutoOp extends LinearOpMode {
                         movement.rotate90InPlace(true);
                         break;
                     case 0:
+                        Utils.addLine("F2 Team prop index 0");
                         // Do funky maneuver
                         movement.rotate90InPlace(false);
                         movement.moveLine(-0.50 * Map.TILE_SIZE);
@@ -217,12 +278,15 @@ public class MainAutoOp extends LinearOpMode {
             case F4:
                 switch (teamPropIndex) {
                     case -1:
+                        Utils.addLine("F4 Team prop index -1");
                         movement.rotate180InPlace(false);
                         return MapCoord.E4;
                     case 0:
+                        Utils.addLine("F4 Team prop index 0");
                         movement.rotate90InPlace(false);
                         return MapCoord.E4;
                     case 1:
+                        Utils.addLine("F4 Team prop index 1");
                         // Do funky maneuver
                         movement.rotate90InPlace(false);
                         movement.moveLine(0.50 * Map.TILE_SIZE);
@@ -234,6 +298,7 @@ public class MainAutoOp extends LinearOpMode {
                 break;
         }
 
+        */
         return null;
     }
 
@@ -266,19 +331,19 @@ public class MainAutoOp extends LinearOpMode {
         }
 
         movement.moveHorizontal(horizontalDelta * Map.PIXEL_OUTER_SIZE, 0.02, 45);
-        gripper.setArmHeight(0.0);
+        //gripper.setArmHeight(0.0);
 
         while (!checker.checkFront()) {
             movement.moveLine(0.03);
         }
 
-        gripper.setGripperTargetsWait(false, false);
+        //gripper.setGripperTargetsWait(false, false);
     }
 
     // Pickup 2 white pixels from the audience side. Assumes the bot is D2-S
     private void pickupWhitePixels() {
         movement.moveLine(Map.TILE_SIZE * 0.9);
-        gripper.setGripperTargetsWait(false, false);
+        //gripper.setGripperTargetsWait(false, false);
         movement.moveLine(-Map.TILE_SIZE * 0.9);
     }
 

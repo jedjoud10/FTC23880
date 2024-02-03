@@ -36,9 +36,11 @@ public class MainTeleOp extends LinearOpMode {
     private RobotMovement movement;
     private RobotGripper gripper;
     private Servo launchServo;
+    private RobotTrussPulley pulley;
     private MultipleTelemetry debug = new MultipleTelemetry(telemetry, FtcDashboard.getInstance().getTelemetry());
     @Override
     public void runOpMode() {
+        pulley = new RobotTrussPulley(hardwareMap, debug);
         movement = new RobotMovement(hardwareMap, debug);
         gripper = new RobotGripper(movement, hardwareMap, debug);
         launchServo = hardwareMap.get(Servo.class, "launchServo");
@@ -48,13 +50,10 @@ public class MainTeleOp extends LinearOpMode {
 
         // run until the end of the match (driver presses STOP)
         while (opModeIsActive()) {
-            // Handle gripper
             gripper.handleGripperUpdate(gamepad2);
-
-            // Launch servo activation
+            pulley.handlePulleyUpdate(gamepad2);
             boolean launch = gamepad1.a && gamepad1.dpad_left;
             launchServo.setPosition(launch ? 0.4 : 0.0);
-
             movement.handleMovementUpdate(gamepad1);
             debug.update();
         }

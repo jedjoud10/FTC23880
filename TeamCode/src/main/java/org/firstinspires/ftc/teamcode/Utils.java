@@ -2,7 +2,11 @@ package org.firstinspires.ftc.teamcode;
 
 import androidx.core.math.MathUtils;
 
+import com.acmerobotics.dashboard.telemetry.MultipleTelemetry;
+
 public class Utils {
+    public static MultipleTelemetry debug;
+
     public static void sleep(long milliseconds) {
         try {
             Thread.sleep(milliseconds);
