@@ -1,0 +1,1 @@
+Most of the models here were based from the public CAD files from rev robotics. I simply converted the .STEP files to .obj and then imported them into blender for modifications
